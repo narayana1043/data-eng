@@ -1,0 +1,13 @@
+*__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.DS_Store
+.env
+export
+logs/
+*.ipynb_checkpoints/
+data/delta/
+data/files/
+data/iceberg/
