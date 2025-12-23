@@ -90,53 +90,6 @@ x-airflow-common:
       condition: service_healthy
 
 services:
-
-  spark-master:
-    build: .
-    container_name: spark-master
-    hostname: spark-master
-    command: >
-      /opt/spark/bin/spark-class
-      org.apache.spark.deploy.master.Master
-    ports:
-      - "8081:8080"
-      - "7077:7077"
-    volumes:
-      - ./data:/opt/spark/work-dir/data
-
-  spark-worker:
-    build: .
-    container_name: spark-worker
-    hostname: spark-worker
-    depends_on:
-      - spark-master
-    command: >
-      /opt/spark/bin/spark-class
-      org.apache.spark.deploy.worker.Worker
-      spark://spark-master:7077
-    volumes:
-      - ./data:/opt/spark/work-dir/data
-
-  jupyter:
-    build: .
-    container_name: spark-jupyter
-    hostname: spark-jupyter
-    depends_on:
-      - spark-master
-    ports:
-      - "8888:8888"
-    volumes:
-      - ./data:/opt/spark/work-dir/data
-    command: >
-      bash -c "
-      jupyter notebook
-      --ip=0.0.0.0
-      --port=8888
-      --allow-root
-      --no-browser
-      --NotebookApp.token=''
-      --NotebookApp.password=''
-      "
       
   postgres:
     image: postgres:16
