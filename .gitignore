@@ -4,7 +4,6 @@
 *.pyd
 .Python
 .DS_Store
-.env
 export
 logs/
 *.ipynb_checkpoints/
