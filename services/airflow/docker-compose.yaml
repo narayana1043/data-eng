@@ -76,6 +76,7 @@ x-airflow-common:
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
     # The following line can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
+    AIRFLOW_PROJ_DIR: './data/airflow'
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
@@ -155,12 +156,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-    environment:
-      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
-      AIRFLOW__WEBSERVER__DEFAULT_USER: airflow
-      AIRFLOW__WEBSERVER__DEFAULT_PASSWORD: airflow
-    volumes:
-      - ./data/airflow/dags:/opt/airflow/dags
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
@@ -326,6 +321,9 @@ services:
       _AIRFLOW_WWW_USER_CREATE: 'true'
       _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
       _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__WEBSERVER__DEFAULT_USER: airflow
+      AIRFLOW__WEBSERVER__DEFAULT_PASSWORD: airflow
       _PIP_ADDITIONAL_REQUIREMENTS: ''
     user: "0:0"
 
