@@ -155,6 +155,12 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    environment:
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__WEBSERVER__DEFAULT_USER: airflow
+      AIRFLOW__WEBSERVER__DEFAULT_PASSWORD: airflow
+    volumes:
+      - ./data/airflow/dags:/opt/airflow/dags
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
