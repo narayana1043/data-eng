@@ -67,3 +67,13 @@ services:
       VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
 
       REST_ADVERTISED_HOST_NAME: debezium
+
+  debezium-ui:
+    image: debezium/debezium-ui:latest
+    container_name: debezium-ui
+    depends_on:
+      - debezium
+    ports:
+      - "8084:8080"
+    environment:
+      KAFKA_CONNECT_URIS: http://debezium:8083
