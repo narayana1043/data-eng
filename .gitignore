@@ -5,7 +5,7 @@
 .Python
 .DS_Store
 export
-logs/
+*/logs/*
 *.ipynb_checkpoints/
 data/delta/
 data/files/
