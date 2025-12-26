@@ -5,8 +5,8 @@
 .Python
 .DS_Store
 export
-*/logs/*
 *.ipynb_checkpoints/
 data/delta/
 data/files/
 data/iceberg/
+data/airflow/logs/
