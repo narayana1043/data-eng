@@ -13,7 +13,7 @@ default_args = {
     'owner': 'airflow',
 }
 
-def download_sample_db():
+def download_dvdrental_db():
     """Download PostgreSQL sample database SQL file"""
     url = "https://neon.com/postgresqltutorial/dvdrental.zip"
     response = requests.get(url)
@@ -21,7 +21,7 @@ def download_sample_db():
         f.write(response.content)
     print("Sample database downloaded")
 
-def extract():
+def extract_dvdrental_db():
     """Extract and load data into PostgreSQL"""
     
     # Extract zip file
@@ -36,20 +36,20 @@ with DAG(
     catchup=False,
 ) as dag:
 
-    download = PythonOperator(
-        task_id='download_sample_db',
-        python_callable=download_sample_db,
+    download_dvdrental_db = PythonOperator(
+        task_id='download_dvdrental_db',
+        python_callable=download_dvdrental_db,
     )
 
-    extract = PythonOperator(
-        task_id='load_sample_db',
-        python_callable=extract,
+    extract_dvdrental_db = PythonOperator(
+        task_id='extract_dvdrental_db',
+        python_callable=extract_dvdrental_db,
     )
 
     restore_db = SQLExecuteQueryOperator(
-        task_id='run_sql',
+        task_id='restore_dvdrental_db',
         conn_id="tutorial_pg_conn",
         sql='/tmp/postgres_sample_db/restore.sql',
     )
 
-    download >> extract >> restore_db
+    download_dvdrental_db >> extract_dvdrental_db >> restore_db
