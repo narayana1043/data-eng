@@ -8,18 +8,18 @@ until curl -s http://localhost:8083/connector-plugins | grep -q "PostgresConnect
   sleep 5
 done
 
-echo "Registering PostgreSQL Connector..."
+echo "Registering PostgreSQL Airflow Connector..."
 curl -i -X POST \
   -H "Accept:application/json" \
   -H "Content-Type:application/json" \
   http://localhost:8083/connectors \
-  -d @/scripts/connectors/postgres-source.json
+  -d @/scripts/connectors/postgres-airflow-source.json
 
-echo "Registering MySQL Connector..."
+echo "Registering MySQL Airflow  Connector..."
 curl -i -X POST \
   -H "Accept:application/json" \
   -H "Content-Type:application/json" \
   http://localhost:8083/connectors \
-  -d @/scripts/connectors/mysql-source.json
+  -d @/scripts/connectors/mysql-airflow-source.json
 
-echo "Connectors registered successfully."
+echo "Airflow Connectors registered successfully."

@@ -1,0 +1,24 @@
+{
+  "name": "postgres-dvdrental-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+
+    "database.hostname": "host.docker.internal",
+    "database.port": "5432",
+    "database.user": "airflow",
+    "database.password": "airflow",
+    "database.dbname": "dvdrental",
+
+    "topic.prefix": "postgres_dvdrental",
+
+    "plugin.name": "pgoutput",
+    "slot.name": "debezium_slot",
+    "publication.autocreate.mode": "filtered",
+    "snapshot.mode": "initial",
+    "table.include.list": "public.*",
+
+    "schema.history.internal.kafka.bootstrap.servers": "kafka:29092",
+    "schema.history.internal.kafka.topic": "schema_changes.postgres_dvdrental"
+  }
+}

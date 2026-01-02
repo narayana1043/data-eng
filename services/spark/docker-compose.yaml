@@ -37,7 +37,7 @@ services:
     ports:
       - "8888:8888"
     volumes:
-      - ./data:/opt/spark/work-dir/data
+      - ../../data/notebooks:/opt/spark/work-dir/data
     command: >
       bash -c "
       jupyter notebook

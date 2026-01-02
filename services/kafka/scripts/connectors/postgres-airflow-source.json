@@ -1,5 +1,5 @@
 {
-  "name": "postgres-connector",
+  "name": "postgres-airflow-connector",
   "config": {
     "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
     "tasks.max": "1",
@@ -10,11 +10,15 @@
     "database.password": "airflow",
     "database.dbname": "airflow",
 
-    "topic.prefix": "postgres_server",
+    "topic.prefix": "postgres_airflow",
 
     "plugin.name": "pgoutput",
     "slot.name": "debezium_slot",
     "publication.autocreate.mode": "filtered",
-    "snapshot.mode": "initial"
+    "table.include.list": "public.dag_run,public.task_instance",
+    "snapshot.mode": "never",
+
+    "schema.history.internal.kafka.bootstrap.servers": "kafka:29092",
+    "schema.history.internal.kafka.topic": "schema_changes.postgres_airflow"
   }
 }

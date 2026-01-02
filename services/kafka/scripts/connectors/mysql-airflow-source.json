@@ -1,5 +1,5 @@
 {
-  "name": "mysql-connector",
+  "name": "mysql-airflow-connector",
   "config": {
     "connector.class": "io.debezium.connector.mysql.MySqlConnector",
     "tasks.max": "1",
@@ -10,14 +10,14 @@
     "database.password": "airflow",
 
     "database.server.id": "5401",
-    "database.include.list": "inventory",
+    "database.include.list": "airflow",
 
-    "topic.prefix": "mysql_server",
+    "topic.prefix": "mysql_airflow",
 
     "snapshot.mode": "initial",
     "include.schema.changes": "false",
 
-    "database.history.kafka.bootstrap.servers": "kafka:9092",
-    "database.history.kafka.topic": "schema-changes.mysql"
+    "schema.history.internal.kafka.bootstrap.servers": "kafka:29092",
+    "schema.history.internal.kafka.topic": "schema_changes.mysql_airflow"
   }
 }
