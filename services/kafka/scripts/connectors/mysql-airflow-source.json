@@ -14,7 +14,7 @@
 
     "topic.prefix": "mysql_airflow",
 
-    "snapshot.mode": "initial",
+    "snapshot.mode": "never",
     "include.schema.changes": "false",
 
     "schema.history.internal.kafka.bootstrap.servers": "kafka:29092",

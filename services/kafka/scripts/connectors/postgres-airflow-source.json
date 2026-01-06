@@ -13,7 +13,7 @@
     "topic.prefix": "postgres_airflow",
 
     "plugin.name": "pgoutput",
-    "slot.name": "debezium_slot",
+    "slot.name": "pg_airflow_public_cdc",
     "publication.autocreate.mode": "filtered",
     "table.include.list": "public.dag_run,public.task_instance",
     "snapshot.mode": "never",

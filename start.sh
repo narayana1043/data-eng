@@ -2,23 +2,13 @@
 set -e
 
 PATH_PREFIX=${PATH_PREFIX:-"./"}
-IS_WSL=false
-if grep -qi microsoft /proc/version; then
-  IS_WSL=true
-  echo "WSL environment detected"
-fi
 
 ####################################
 # Common permission setup
 ####################################
 fix_permissions() {
-  if [ "$IS_WSL" = true ]; then
-    sudo chown -R "$(id -u)":"$(id -g)" ./data ./services ./scripts || true
-    sudo chmod -R 775 ./data ./services ./scripts || true
-  else
-    sudo chown -R "$(id -un)":"$(id -gn)" .
-    sudo chmod -R ugo+rw .
-  fi
+  sudo chown -R "$(id -un)":"$(id -gn)" .
+  sudo chmod -R ugo+rw .
 }
 
 ####################################
@@ -56,6 +46,7 @@ start_kafka() {
 
   read -r -p "Register Debezium PostgreSQL connector? (y/n): " register_connector
   if [[ "$register_connector" == "y" ]]; then
+    sleep 80
     docker compose -f ${PATH_PREFIX}services/kafka/docker-compose.yaml exec debezium \
       curl -i -X POST \
       -H "Accept:application/json" \

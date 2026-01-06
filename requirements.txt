@@ -2,3 +2,5 @@ apache-airflow==3.1.5
 apache-airflow-providers-postgres
 psycopg2-binary
 apache-airflow-providers-mysql
+pyspark==3.5.1
+delta-spark==2.12.3

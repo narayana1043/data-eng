@@ -14,6 +14,7 @@ services:
       - "7077:7077"
     volumes:
       - ./data:/opt/spark/work-dir/data
+      - ../../data/spark:/opt/spark/jobs/
 
   spark-worker:
     build: .
@@ -27,6 +28,7 @@ services:
       spark://spark-master:7077
     volumes:
       - ./data:/opt/spark/work-dir/data
+      - ../../data/spark:/opt/spark/jobs/
 
   jupyter:
     build: .
