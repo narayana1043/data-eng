@@ -44,6 +44,7 @@ start_airflow() {
       cp services/spark/tmp/pyspark-3.5.1.tar.gz services/airflow/tmp/pyspark-3.5.1.tar.gz
     else
       pip download --no-deps --dest services/airflow/tmp pyspark==3.5.1 delta-spark==3.1.0
+      mkdir -p services/spark/tmp/
       cp services/airflow/tmp/pyspark-3.5.1.tar.gz services/spark/tmp/pyspark-3.5.1.tar.gz
     fi
   fi
@@ -125,6 +126,7 @@ start_spark() {
       cp services/airflow/tmp/pyspark-3.5.1.tar.gz services/spark/tmp/pyspark-3.5.1.tar.gz
     else
       pip download --no-deps --dest services/spark/tmp pyspark==3.5.1 delta-spark==3.1.0
+      mkdir -p services/airflow/tmp/
       cp services/spark/tmp/pyspark-3.5.1.tar.gz services/airflow/tmp/pyspark-3.5.1.tar.gz
     fi
   fi
