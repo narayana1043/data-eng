@@ -39,16 +39,18 @@ start_airflow() {
   sleep 3
   mkdir -p ${PATH_PREFIX}services/airflow/tmp/hadoop-conf/
   cp -r ${PATH_PREFIX}services/spark/*.xml ${PATH_PREFIX}services/airflow/tmp/hadoop-conf/
+  if ! [ -f services/airflow/tmp/pyspark-3.5.1.tar.gz ]; then
+    if [ -f services/spark/tmp/pyspark-3.5.1.tar.gz ]; then
+      cp services/spark/tmp/pyspark-3.5.1.tar.gz services/airflow/tmp/pyspark-3.5.1.tar.gz
+    else
+      pip download --no-deps --dest services/airflow/tmp pyspark==3.5.1 delta-spark==3.1.0
+      cp services/airflow/tmp/pyspark-3.5.1.tar.gz services/spark/tmp/pyspark-3.5.1.tar.gz
+    fi
+  fi
+
   docker compose -f ${PATH_PREFIX}services/airflow/docker-compose.yaml up --build -d
   echo "Airflow services started."
   rm -rf ${PATH_PREFIX}services/airflow/tmp/hadoop-conf/
-
-  if [ -f services/spark/tmp/pyspark-3.5.1.tar.gz ]; then
-    cp services/spark/tmp/pyspark-3.5.1.tar.gz services/airflow/tmp/pyspark-3.5.1.tar.gz
-  else
-    pip download --no-deps --dest services/airflow/tmp pyspark==3.5.1 delta-spark==3.1.0
-    cp services/airflow/tmp/pyspark-3.5.1.tar.gz services/spark/tmp/pyspark-3.5.1.tar.gz
-  fi
 
   echo "removing copied hadoop config files from airflow service..."
 
@@ -118,12 +120,13 @@ start_spark() {
   download_if_missing services/spark/tmp/commons-pool2-2.12.0.jar \
     https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.12.0/commons-pool2-2.12.0.jar
 
-
-  if [ -f services/airflow/tmp/pyspark-3.5.1.tar.gz ]; then
-    cp services/airflow/tmp/pyspark-3.5.1.tar.gz services/spark/tmp/pyspark-3.5.1.tar.gz
-  else
-    pip download --no-deps --dest services/spark/tmp pyspark==3.5.1 delta-spark==3.1.0
-    cp services/spark/tmp/pyspark-3.5.1.tar.gz services/airflow/tmp/pyspark-3.5.1.tar.gz
+  if ! [ -f services/spark/tmp/pyspark-3.5.1.tar.gz ]; then
+    if [ -f services/airflow/tmp/pyspark-3.5.1.tar.gz ]; then
+      cp services/airflow/tmp/pyspark-3.5.1.tar.gz services/spark/tmp/pyspark-3.5.1.tar.gz
+    else
+      pip download --no-deps --dest services/spark/tmp pyspark==3.5.1 delta-spark==3.1.0
+      cp services/spark/tmp/pyspark-3.5.1.tar.gz services/airflow/tmp/pyspark-3.5.1.tar.gz
+    fi
   fi
 
   docker compose -f ${PATH_PREFIX}services/spark/docker-compose.yaml down
