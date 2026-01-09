@@ -1,0 +1,34 @@
+<!-- hdfs-site.xml -->
+<configuration>
+
+  <!-- Single node -->
+  <property>
+    <name>dfs.replication</name>
+    <value>1</value>
+  </property>
+
+  <!-- NameNode metadata -->
+  <property>
+    <name>dfs.namenode.name.dir</name>
+    <value>file:///tmp/hadoop-hadoop/dfs/name</value>
+  </property>
+
+  <!-- DataNode data -->
+  <property>
+    <name>dfs.datanode.data.dir</name>
+    <value>file:///tmp/hadoop-hadoop/dfs/data</value>
+  </property>
+
+  <!-- RPC Address -->
+  <property>
+    <name>dfs.namenode.rpc-address</name>
+    <value>hadoop:8020</value>
+  </property>
+
+  <!-- NameNode Web UI -->
+  <property>
+    <name>dfs.namenode.http-address</name>
+    <value>hadoop:9870</value>
+  </property>
+
+</configuration>

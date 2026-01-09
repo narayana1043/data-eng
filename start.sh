@@ -3,6 +3,9 @@ set -e
 
 PATH_PREFIX=${PATH_PREFIX:-"./"}
 
+docker network inspect data-engine-network >/dev/null 2>&1 \
+|| docker network create data-engine-network
+
 ####################################
 # Common permission setup
 ####################################
@@ -11,15 +14,43 @@ fix_permissions() {
   sudo chmod -R ugo+rw .
 }
 
+#####################################
+### Utility to download file if missing
+####################################
+
+download_if_missing () {
+  local file=$1
+  local url=$2
+
+  if [[ -f "$file" ]]; then
+    echo "Skipping download: $file already exists."
+  else
+    curl -fL -o "$file" "$url"
+  fi
+}
+
 ####################################
 # Airflow
 ####################################
 start_airflow() {
   echo "Starting Airflow services..."
+  echo "copying hadoop config files to airflow service..."
   docker compose -f ${PATH_PREFIX}services/airflow/docker-compose.yaml down
   sleep 3
+  mkdir -p ${PATH_PREFIX}services/airflow/tmp/hadoop-conf/
+  cp -r ${PATH_PREFIX}services/spark/*.xml ${PATH_PREFIX}services/airflow/tmp/hadoop-conf/
   docker compose -f ${PATH_PREFIX}services/airflow/docker-compose.yaml up --build -d
   echo "Airflow services started."
+  rm -rf ${PATH_PREFIX}services/airflow/tmp/hadoop-conf/
+
+  if [ -f services/spark/tmp/pyspark-3.5.1.tar.gz ]; then
+    cp services/spark/tmp/pyspark-3.5.1.tar.gz services/airflow/tmp/pyspark-3.5.1.tar.gz
+  else
+    pip download --no-deps --dest services/airflow/tmp pyspark==3.5.1 delta-spark==3.1.0
+    cp services/airflow/tmp/pyspark-3.5.1.tar.gz services/spark/tmp/pyspark-3.5.1.tar.gz
+  fi
+
+  echo "removing copied hadoop config files from airflow service..."
 
   read -r -p "Trigger postgres_sample_db_restore DAG? (y/n): " trigger_dag
   if [[ "$trigger_dag" == "y" ]]; then
@@ -27,11 +58,14 @@ start_airflow() {
     sudo chown -R $(id -u):0 ./data/airflow/{logs,dags,plugins}
     sudo chmod -R 775 ./data/airflow/{logs,dags,plugins}
 
-    docker compose -f ${PATH_PREFIX}services/airflow/docker-compose.yaml exec airflow-apiserver \
+    docker compose -f ${PATH_PREFIX}services/airflow/docker-compose.yaml exec airflow-webserver \
       airflow dags trigger postgres_sample_db_restore
 
     echo "Postgres sample DB DAG triggered."
   fi
+
+  docker ps -aq -f status=exited -f label=com.docker.compose.project=airflow | xargs -r docker rm
+
 }
 
 ####################################
@@ -63,9 +97,38 @@ start_kafka() {
 ####################################
 start_spark() {
   echo "Starting Spark & Delta services..."
+  download_if_missing services/spark/tmp/hadoop-3.3.6.tar.gz \
+    https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
+
+  download_if_missing services/spark/tmp/spark-sql-kafka-0-10_2.12-3.5.1.jar \
+    https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.5.1/spark-sql-kafka-0-10_2.12-3.5.1.jar
+
+  download_if_missing services/spark/tmp/spark-token-provider-kafka-0-10_2.12-3.5.1.jar \
+    https://repo1.maven.org/maven2/org/apache/spark/spark-token-provider-kafka-0-10_2.12/3.5.1/spark-token-provider-kafka-0-10_2.12-3.5.1.jar
+
+  download_if_missing services/spark/tmp/kafka-clients-3.5.1.jar \
+    https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.5.1/kafka-clients-3.5.1.jar
+
+  download_if_missing services/spark/tmp/delta-spark_2.12-3.2.0.jar \
+    https://repo1.maven.org/maven2/io/delta/delta-spark_2.12/3.2.0/delta-spark_2.12-3.2.0.jar
+
+  download_if_missing services/spark/tmp/delta-storage-3.2.0.jar \
+    https://repo1.maven.org/maven2/io/delta/delta-storage/3.2.0/delta-storage-3.2.0.jar
+  
+  download_if_missing services/spark/tmp/commons-pool2-2.12.0.jar \
+    https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.12.0/commons-pool2-2.12.0.jar
+
+
+  if [ -f services/airflow/tmp/pyspark-3.5.1.tar.gz ]; then
+    cp services/airflow/tmp/pyspark-3.5.1.tar.gz services/spark/tmp/pyspark-3.5.1.tar.gz
+  else
+    pip download --no-deps --dest services/spark/tmp pyspark==3.5.1 delta-spark==3.1.0
+    cp services/spark/tmp/pyspark-3.5.1.tar.gz services/airflow/tmp/pyspark-3.5.1.tar.gz
+  fi
+
   docker compose -f ${PATH_PREFIX}services/spark/docker-compose.yaml down
   sleep 3
-  docker compose -f ${PATH_PREFIX}services/spark/docker-compose.yaml up -d
+  docker compose -f ${PATH_PREFIX}services/spark/docker-compose.yaml up -d spark
   echo "Spark & Delta services started."
 }
 

@@ -1,0 +1,11 @@
+$SPARK_HOME/sbin/start-thriftserver.sh \
+--master yarn \
+--deploy-mode client \
+--conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension \
+--conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog \
+--conf spark.sql.warehouse.dir=hdfs:///tmp/spark-warehouse \
+--conf spark.sql.hive.thriftServer.singleSession=true \
+--conf spark.thriftserver.bind.host=0.0.0.0 \
+--conf spark.thriftserver.port=10000 \
+--conf spark.eventLog.enabled=true \
+--conf spark.eventLog.dir=hdfs:///spark/spark-logs

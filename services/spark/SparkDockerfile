@@ -1,0 +1,90 @@
+FROM apache/spark:3.5.1
+
+USER root
+
+# --------------------------------------------------
+# Versions
+# --------------------------------------------------
+ENV SCALA_VERSION=2.12
+ENV SPARK_VERSION=3.5.1
+ENV KAFKA_VERSION=3.5.1
+ENV DELTA_VERSION=3.2.0
+
+# -----------------------------
+# Install required packages
+# -----------------------------
+RUN apt-get update && apt-get install -y \
+    curl \
+    bash \
+    openjdk-11-jdk \
+    procps \
+    netcat \
+    && rm -rf /var/lib/apt/lists/*
+
+# -----------------------------
+# Hadoop version (client only)
+# -----------------------------
+ENV HADOOP_VERSION=3.3.6
+ENV HADOOP_HOME=/opt/hadoop
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+
+# --------------------------------------------------
+# Hadoop client (YARN)
+# --------------------------------------------------
+COPY tmp/ /tmp/
+
+RUN tar -xzf /tmp/hadoop-${HADOOP_VERSION}.tar.gz -C /opt && \
+    ln -s /opt/hadoop-${HADOOP_VERSION} /opt/hadoop
+
+ENV HADOOP_HOME=/opt/hadoop
+ENV HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
+ENV YARN_CONF_DIR=/opt/hadoop/etc/hadoop
+ENV PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+
+# --------------------------------------------------
+# Extra jars directory
+# --------------------------------------------------
+RUN mkdir -p /opt/spark/jars-extra
+
+# --------------------------------------------------
+# Maven dependency cache
+# --------------------------------------------------
+RUN mkdir -p /root/.m2
+
+# --------------------------------------------------
+# Kafka + Delta Lake jars (CACHED BY DOCKER)
+# --------------------------------------------------
+RUN cp /tmp/*.jar /opt/spark/jars/
+
+# -----------------------------
+# Spark config
+# -----------------------------
+COPY spark-defaults.conf /opt/spark/conf/spark-defaults.conf
+COPY spark-env.sh /opt/spark/conf/spark-env.sh
+
+RUN chmod +x /opt/spark/conf/spark-env.sh
+
+# -----------------------------
+# Python (optional but recommended)
+# -----------------------------
+RUN apt-get update && apt-get install -y python3 python3-pip && \
+    ln -s /usr/bin/python3 /usr/bin/python && \
+    pip3 install /tmp/pyspark-3.5.1.tar.gz && \
+    pip3 install /tmp/delta_spark-3.1.0-py3-none-any.whl --upgrade-strategy only-if-needed
+
+# --------------------------------------------------
+# Hadoop config fix: force HDFS (CRITICAL)
+# --------------------------------------------------
+COPY core-site.xml $HADOOP_CONF_DIR/
+COPY hdfs-site.xml $HADOOP_CONF_DIR/
+COPY yarn-site.xml $HADOOP_CONF_DIR/
+
+# --------------------------------------------------
+# Set user and working directory
+# --------------------------------------------------
+# Allow spark user to own /opt
+# RUN chown -R spark:spark /opt
+RUN rm -rf /tmp/*
+
+USER spark
+WORKDIR /opt/spark

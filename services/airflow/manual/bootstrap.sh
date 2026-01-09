@@ -9,7 +9,7 @@
 #!/bin/bash
 set -e
 
-API_URL="http://airflow-apiserver:8080/api/v2"
+API_URL="http://airflow-webserver:8080/api/v2"
 
 echo "🚀 Bootstrapping Airflow (NO AUTH mode)"
 

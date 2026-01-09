@@ -11,3 +11,4 @@ data/files/
 data/iceberg/
 data/airflow/logs/
 .venv/
+*tmp/

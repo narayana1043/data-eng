@@ -1,74 +1,78 @@
-version: "3.8"
+networks:
+  data-engine-network:
+    external: true
 
 services:
-
-  spark-master:
-    build: .
-    container_name: spark-master
-    hostname: spark-master
-    command: >
-      /opt/spark/bin/spark-class
-      org.apache.spark.deploy.master.Master
+  # ----------------------------------------------------
+  # HADOOP (HDFS + YARN)
+  # ----------------------------------------------------
+  hadoop:
+    container_name: hadoop
+    build:
+      context: .
+      dockerfile: HadoopDockerfile
+    hostname: hadoop
+    stdin_open: true
+    tty: true
     ports:
-      - "8081:8080"
-      - "7077:7077"
+      - "9870:9870"   # NameNode UI
+      - "9864:9864"   # DataNode UI
+      - "9000:9000"   # HDFS
+      - "8088:8088"   # YARN ResourceManager UI
     volumes:
-      - ./data:/opt/spark/work-dir/data
-      - ../../data/spark:/opt/spark/jobs/
+      - ./hadoop/namenode:/data/hadoop-hadoop/dfs/name
+      - ./hadoop/datanode:/data/hadoop-hadoop/dfs/data
+    mem_limit: 6g
+    cpus: 2
+    networks:
+      - data-engine-network
 
-  spark-worker:
-    build: .
-    container_name: spark-worker
-    hostname: spark-worker
+  # ----------------------------------------------------
+  # SPARK (Driver submits to YARN)
+  # ----------------------------------------------------
+  spark:
+    build:
+      context: .
+      dockerfile: SparkDockerfile
+    container_name: spark
+    command: ['sleep', 'infinity']
     depends_on:
-      - spark-master
-    command: >
-      /opt/spark/bin/spark-class
-      org.apache.spark.deploy.worker.Worker
-      spark://spark-master:7077
+      - hadoop
+    environment:
+      HADOOP_CONF_DIR: /opt/hadoop/etc/hadoop
+      YARN_CONF_DIR: /opt/hadoop/etc/hadoop
+      SPARK_CONF_DIR: /opt/spark/conf
     volumes:
-      - ./data:/opt/spark/work-dir/data
-      - ../../data/spark:/opt/spark/jobs/
+      - ../../data/spark-jobs/:/opt/spark/jobs
+    tty: true
+    ports:
+      - "4040:4040"   # Spark UI
+      - "10000:10000" # thrift server
+    networks:
+      - data-engine-network
 
+  # ----------------------------------------------------
+  # JUPYTER (OPTIONAL, SAFE WAY)
+  # ----------------------------------------------------
   jupyter:
-    build: .
-    container_name: spark-jupyter
-    hostname: spark-jupyter
+    image: jupyter/pyspark-notebook:latest
+    container_name: jupyter
     depends_on:
-      - spark-master
+      - hadoop
     ports:
       - "8888:8888"
+    environment:
+      SPARK_MASTER: yarn
+      HADOOP_CONF_DIR: /opt/hadoop/etc/hadoop
+      YARN_CONF_DIR: /opt/hadoop/etc/hadoop
     volumes:
-      - ../../data/notebooks:/opt/spark/work-dir/data
-    command: >
-      bash -c "
-      jupyter notebook
-      --ip=0.0.0.0
-      --port=8888
-      --allow-root
-      --no-browser
-      --NotebookApp.token=''
-      --NotebookApp.password=''
-      "
-  # unitycatalog-server:
-  #   image: unitycatalog/unitycatalog:main
-  #   container_name: unitycatalog-server
-  #   ports:
-  #     - "8081:8080"
-  #   volumes:
-  #     - ./data:/home/unitycatalog/etc
-  #     - ./etc/conf:/home/unitycatalog/etc/conf
-  #   restart: unless-stopped
-  #   networks:
-  #     default:
-  #       aliases:
-  #         - server   # ✅ makes http://server:8080 work
+      - ./../../data/notebooks:/home/jovyan/work
+    networks:
+      - data-engine-network
 
-  # unitycatalog-ui:
-  #   image: unitycatalog/unitycatalog-ui:main
-  #   container_name: unitycatalog-ui
-  #   depends_on:
-  #     - unitycatalog-server
-  #   ports:
-  #     - "3000:3000"
-  #   restart: unless-stopped
+
+# ----------------------------------------------------
+# VOLUMES
+# ----------------------------------------------------
+volumes:
+  hadoop_data:

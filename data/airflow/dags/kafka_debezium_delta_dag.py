@@ -25,13 +25,25 @@ with DAG(
         application="/opt/spark/jobs/spark_kafka_debezium_to_delta.py",
         
         # FORCE Standalone mode (overrides everything)
-        conn_id = 'spark_standalone',
+        conn_id = 'spark-local-cluster',
 
         # IMPORTANT: submit to existing Spark cluster
         conf={
             # Delta configs
             "spark.sql.extensions": "io.delta.sql.DeltaSparkSessionExtension",
-            "spark.sql.catalog.spark_catalog": "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+            "spark.sql.catalog.spark_catalog": "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+            "spark.eventLog.enabled": "false",
+            "spark.sql.warehouse.dir": "hdfs:///user/hive/warehouse",
+            "spark.master": "yarn",
+            "spark.submit.deployMode": "cluster",
+            "spark.pyspark.python": "/usr/bin/python3",
+            "spark.pyspark.driver.python": "/usr/bin/python3",
+            "spark.executorEnv.PYSPARK_PYTHON": "/usr/bin/python3",
+            "spark.yarn.appMasterEnv.PYSPARK_PYTHON": "/usr/bin/python3"
+        },
+        env_vars={
+            "HADOOP_CONF_DIR": "/opt/hadoop/etc/hadoop",
+            "YARN_CONF_DIR": "/opt/hadoop/etc/hadoop"
         },
 
         # Packages NOT needed if already baked into Spark image
@@ -39,9 +51,9 @@ with DAG(
 
         application_args=[
             "--kafka-bootstrap", "kafka:29092",
-            "--topic", "postgres_dvdrental.public.film",
-            "--delta-table", "dvdrental_delta.film",
-            "--checkpoint", "/delta/_checkpoints/film"
+            "--topic", "postgres_dvdrental.public.film_actor",
+            "--delta-table", "hdfs:///tmp/delta/actors",
+            "--checkpoint", "/spark/delta/checkpoints/actors"
         ],
 
         name="kafka-debezium-delta-cdc",

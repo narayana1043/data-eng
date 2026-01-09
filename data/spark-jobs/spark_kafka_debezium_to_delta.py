@@ -5,6 +5,7 @@ from pyspark.sql.functions import (
 )
 from pyspark.sql.types import *
 from pyspark.sql.window import Window
+from delta.tables import DeltaTable
 
 # -------------------------
 # Arguments
@@ -27,6 +28,8 @@ spark = (
     .getOrCreate()
 )
 
+
+spark.conf.unset("spark.sql.streaming.checkpointLocation")
 spark.sparkContext.setLogLevel("WARN")
 
 # -------------------------
@@ -93,6 +96,15 @@ flat_df = (
     )
 )
 
+if not DeltaTable.isDeltaTable(spark, args.delta_table):
+    (
+        spark.createDataFrame([], flat_df.schema)   # your final schema
+        .write
+        .format("delta")
+        .mode("overwrite")
+        .save(args.delta_table)
+    )
+
 # -------------------------
 # Deduplicate (latest event wins)
 # -------------------------
@@ -119,9 +131,9 @@ def merge_to_delta(batch_df, batch_id):
     )
 
     dedup_df.createOrReplaceTempView("film_staging")
-
+    dedup_df = dedup_df.coallesce(2)
     dedup_df.sparkSession.sql(f"""
-        MERGE INTO {args.delta_table} AS tgt
+        MERGE INTO delta.`{args.delta_table}` AS tgt
         USING film_staging AS src
         ON tgt.film_id = src.film_id
 
