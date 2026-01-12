@@ -2,6 +2,12 @@
 set -e
 
 PATH_PREFIX=${PATH_PREFIX:-"./"}
+# Set the versions
+SCALA_VERSION=2.13
+HADOOP_VERSION=3.3.6
+SPARK_VERSION=4.0.1
+KAFKA_VERSION=3.5.1   # Parameterized Kafka version
+DELTA_VERSION=4.0.0   # Upgrade Delta version to 4.x
 
 docker network inspect data-engine-network >/dev/null 2>&1 \
 || docker network create data-engine-network
@@ -25,6 +31,7 @@ download_if_missing () {
   if [[ -f "$file" ]]; then
     echo "Skipping download: $file already exists."
   else
+    echo "curl -fL -o $file $url"
     curl -fL -o "$file" "$url"
   fi
 }
@@ -33,23 +40,25 @@ download_if_missing () {
 # Airflow
 ####################################
 start_airflow() {
+  COMPOSE_FILE=${PATH_PREFIX}services/airflow/docker-compose-standalone.yaml
+
   echo "Starting Airflow services..."
   echo "copying hadoop config files to airflow service..."
-  docker compose -f ${PATH_PREFIX}services/airflow/docker-compose.yaml down
+  docker compose -f ${COMPOSE_FILE} down
   sleep 3
   mkdir -p ${PATH_PREFIX}services/airflow/tmp/hadoop-conf/
   cp -r ${PATH_PREFIX}services/spark/*.xml ${PATH_PREFIX}services/airflow/tmp/hadoop-conf/
-  if ! [ -f services/airflow/tmp/pyspark-3.5.1.tar.gz ]; then
-    if [ -f services/spark/tmp/pyspark-3.5.1.tar.gz ]; then
-      cp services/spark/tmp/pyspark-3.5.1.tar.gz services/airflow/tmp/pyspark-3.5.1.tar.gz
+  if ! [ -f services/airflow/tmp/pyspark-${SPARK_VERSION}.tar.gz ]; then
+    if [ -f services/spark/tmp/pyspark-${SPARK_VERSION}.tar.gz ]; then
+      cp services/spark/tmp/pyspark-${SPARK_VERSION}.tar.gz services/airflow/tmp/pyspark-${SPARK_VERSION}.tar.gz
     else
-      pip download --no-deps --dest services/airflow/tmp pyspark==3.5.1 delta-spark==3.1.0
+      pip download --no-deps --dest services/airflow/tmp pyspark==${SPARK_VERSION} delta-spark==3.1.0
       mkdir -p services/spark/tmp/
-      cp services/airflow/tmp/pyspark-3.5.1.tar.gz services/spark/tmp/pyspark-3.5.1.tar.gz
+      cp services/airflow/tmp/pyspark-${SPARK_VERSION}.tar.gz services/spark/tmp/pyspark-${SPARK_VERSION}.tar.gz
     fi
   fi
 
-  docker compose -f ${PATH_PREFIX}services/airflow/docker-compose.yaml up --build -d
+  docker compose -f ${COMPOSE_FILE} up --build -d
   echo "Airflow services started."
   rm -rf ${PATH_PREFIX}services/airflow/tmp/hadoop-conf/
 
@@ -100,34 +109,46 @@ start_kafka() {
 ####################################
 start_spark() {
   echo "Starting Spark & Delta services..."
-  download_if_missing services/spark/tmp/hadoop-3.3.6.tar.gz \
-    https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
-
-  download_if_missing services/spark/tmp/spark-sql-kafka-0-10_2.12-3.5.1.jar \
-    https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.5.1/spark-sql-kafka-0-10_2.12-3.5.1.jar
-
-  download_if_missing services/spark/tmp/spark-token-provider-kafka-0-10_2.12-3.5.1.jar \
-    https://repo1.maven.org/maven2/org/apache/spark/spark-token-provider-kafka-0-10_2.12/3.5.1/spark-token-provider-kafka-0-10_2.12-3.5.1.jar
-
-  download_if_missing services/spark/tmp/kafka-clients-3.5.1.jar \
-    https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.5.1/kafka-clients-3.5.1.jar
-
-  download_if_missing services/spark/tmp/delta-spark_2.12-3.2.0.jar \
-    https://repo1.maven.org/maven2/io/delta/delta-spark_2.12/3.2.0/delta-spark_2.12-3.2.0.jar
-
-  download_if_missing services/spark/tmp/delta-storage-3.2.0.jar \
-    https://repo1.maven.org/maven2/io/delta/delta-storage/3.2.0/delta-storage-3.2.0.jar
   
-  download_if_missing services/spark/tmp/commons-pool2-2.12.0.jar \
-    https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.12.0/commons-pool2-2.12.0.jar
+  # Download Spark
+  download_if_missing services/spark/tmp/spark-${SPARK_VERSION}-bin-hadoop3.tgz \
+      https://downloads.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz
 
-  if ! [ -f services/spark/tmp/pyspark-3.5.1.tar.gz ]; then
-    if [ -f services/airflow/tmp/pyspark-3.5.1.tar.gz ]; then
-      cp services/airflow/tmp/pyspark-3.5.1.tar.gz services/spark/tmp/pyspark-3.5.1.tar.gz
+  # Download Hadoop if missing
+  download_if_missing services/spark/tmp/hadoop-${HADOOP_VERSION}.tar.gz \
+      https://downloads.apache.org/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz
+
+  # Download Kafka SQL connector for Spark 4.0.1 if missing (ensure it's compatible with Spark 4.x)
+  download_if_missing services/spark/tmp/spark-sql-kafka-0-10_${SCALA_VERSION}-${SPARK_VERSION}.jar \
+      https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_${SCALA_VERSION}/${SPARK_VERSION}/spark-sql-kafka-0-10_${SCALA_VERSION}-${SPARK_VERSION}.jar
+
+  # Download Kafka token provider for Spark 4.0.1 if missing
+  download_if_missing services/spark/tmp/spark-token-provider-kafka-0-10_${SCALA_VERSION}-${SPARK_VERSION}.jar \
+      https://repo1.maven.org/maven2/org/apache/spark/spark-token-provider-kafka-0-10_${SCALA_VERSION}/${SPARK_VERSION}/spark-token-provider-kafka-0-10_${SCALA_VERSION}-${SPARK_VERSION}.jar
+
+  # Download Kafka clients with parameterized Kafka version
+  download_if_missing services/spark/tmp/kafka-clients-${KAFKA_VERSION}.jar \
+      https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/${KAFKA_VERSION}/kafka-clients-${KAFKA_VERSION}.jar
+
+  # Download Delta Spark with parameterized Delta version if missing
+  download_if_missing services/spark/tmp/delta-spark_${SCALA_VERSION}-${DELTA_VERSION}.jar \
+      https://repo1.maven.org/maven2/io/delta/delta-spark_${SCALA_VERSION}/${DELTA_VERSION}/delta-spark_${SCALA_VERSION}-${DELTA_VERSION}.jar
+  
+  # Download commons-pool2
+  download_if_missing services/spark/tmp/commons-pool2-${SCALA_VERSION}.1-bin.tar.gz \
+      https://dlcdn.apache.org//commons/pool/binaries/commons-pool2-${SCALA_VERSION}.1-bin.tar.gz
+  tar -xvf services/spark/tmp/commons-pool2-${SCALA_VERSION}.1-bin.tar.gz \
+      --strip-components=1 \
+      -C services/spark/tmp/ commons-pool2-${SCALA_VERSION}.1/commons-pool2-${SCALA_VERSION}.1.jar
+
+
+  if ! [ -f services/spark/tmp/pyspark-${SPARK_VERSION}.tar.gz ]; then
+    if [ -f services/airflow/tmp/pyspark-${SPARK_VERSION}.tar.gz ]; then
+      cp services/airflow/tmp/pyspark-${SPARK_VERSION}.tar.gz services/spark/tmp/pyspark-${SPARK_VERSION}.tar.gz
     else
-      pip download --no-deps --dest services/spark/tmp pyspark==3.5.1 delta-spark==3.1.0
+      pip download --no-deps --dest services/spark/tmp pyspark==${SPARK_VERSION} delta-spark==4.0
       mkdir -p services/airflow/tmp/
-      cp services/spark/tmp/pyspark-3.5.1.tar.gz services/airflow/tmp/pyspark-3.5.1.tar.gz
+      cp services/spark/tmp/pyspark-${SPARK_VERSION}.tar.gz services/airflow/tmp/pyspark-${SPARK_VERSION}.tar.gz
     fi
   fi
 

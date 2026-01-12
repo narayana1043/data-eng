@@ -19,9 +19,18 @@ services:
       - "9864:9864"   # DataNode UI
       - "9000:9000"   # HDFS
       - "8088:8088"   # YARN ResourceManager UI
+      - "8020:8020"   # HDFS Read/Write
+      - "9866:9866"   # Block Transfer
+      - "9867:9867"   # DataNode RPC
+      - "8032:8032"   # job submission
+      - "8030:8030"   # Resource Allocation
+      - "8033:8033"   # Admin Operations
     volumes:
       - ./hadoop/namenode:/data/hadoop-hadoop/dfs/name
       - ./hadoop/datanode:/data/hadoop-hadoop/dfs/data
+    environment:
+      PYSPARK_PYTHON: python3.10
+      PYSPARK_DRIVER_PYTHON: python3.10
     mem_limit: 6g
     cpus: 2
     networks:
@@ -35,21 +44,44 @@ services:
       context: .
       dockerfile: SparkDockerfile
     container_name: spark
-    command: ['sleep', 'infinity']
     depends_on:
       - hadoop
     environment:
       HADOOP_CONF_DIR: /opt/hadoop/etc/hadoop
       YARN_CONF_DIR: /opt/hadoop/etc/hadoop
       SPARK_CONF_DIR: /opt/spark/conf
+      environment:
+      PYSPARK_PYTHON: python3.10
+      PYSPARK_DRIVER_PYTHON: python3.10
+      HOME: /home/spark
     volumes:
       - ../../data/spark-jobs/:/opt/spark/jobs
+      - ./../../data/notebooks:/home/spark/notebooks
     tty: true
     ports:
       - "4040:4040"   # Spark UI
       - "10000:10000" # thrift server
+      - "18080:18080" # Spark History Server UI
+      - "7077:7077"   # Spark Master
+      - "8888:8888"   # Jupyter Notebook
     networks:
       - data-engine-network
+    command:
+      - bash
+      - -c
+      - |
+        mkdir -p /home/spark/.jupyter /home/spark/.local/share/jupyter/runtime && \
+        chmod -R 777 /home/spark/.jupyter /home/spark/.local/share/jupyter/runtime && \
+        jupyter lab \
+          --ip=0.0.0.0 \
+          --port=8888 \
+          --allow-root \
+          --no-browser \
+          --ServerApp.token='' \
+          --ServerApp.password='' \
+          --ServerApp.disable_check_xsrf=True \
+          --ServerApp.allow_remote_access=True \
+          --ServerApp.root_dir=/home/spark/notebooks/ 
 
   # ----------------------------------------------------
   # JUPYTER (OPTIONAL, SAFE WAY)

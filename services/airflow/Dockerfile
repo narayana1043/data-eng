@@ -24,6 +24,7 @@ ENV YARN_CONF_DIR=/opt/hadoop/etc/hadoop
 
 
 # Switch back to airflow user
+
 USER airflow
 COPY tmp/ /tmp/
 RUN pip install apache-airflow-providers-apache-kafka

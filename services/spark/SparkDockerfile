@@ -1,83 +1,68 @@
-FROM apache/spark:3.5.1
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY tmp/ /tmp/
 
 USER root
 
 # --------------------------------------------------
-# Versions
+# Environment
 # --------------------------------------------------
-ENV SCALA_VERSION=2.12
-ENV SPARK_VERSION=3.5.1
-ENV KAFKA_VERSION=3.5.1
-ENV DELTA_VERSION=3.2.0
+ENV DELTA_SPARK_VERSION=4.0.0
+ENV HADOOP_VERSION=3.3.6
+ENV SPARK_VERSION=4.0.1
+ENV PYSPARK_PYTHON=/usr/bin/python3
+ENV PYSPARK_DRIVER_PYTHON=/usr/bin/python3
+ENV PYSPARK_PYTHON=python3.10
+ENV PYSPARK_DRIVER_PYTHON=python3.10
+ENV HADOOP_HOME=/opt/hadoop
+ENV SPARK_HOME=/opt/spark
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+ENV YARN_CONF_DIR=$HADOOP_CONF_DIR
+ENV PATH=$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$JAVA_HOME/bin:$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
 
 # -----------------------------
-# Install required packages
+# Python
 # -----------------------------
 RUN apt-get update && apt-get install -y \
-    curl \
-    bash \
-    openjdk-11-jdk \
-    procps \
-    netcat \
-    && rm -rf /var/lib/apt/lists/*
+    openjdk-17-jdk \
+    python3.10 \
+    python3.10-venv \
+    python3.10-distutils \
+    python3-pip && \
+    rm -rf /var/lib/apt/lists/*
 
-# -----------------------------
-# Hadoop version (client only)
-# -----------------------------
-ENV HADOOP_VERSION=3.3.6
-ENV HADOOP_HOME=/opt/hadoop
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+RUN ln -s /usr/bin/python3 /usr/bin/python && \
+    python3 -m pip install /tmp/pyspark-${SPARK_VERSION}.tar.gz && \
+    python3 -m pip install /tmp/delta_spark-${DELTA_SPARK_VERSION}-py3-none-any.whl --upgrade-strategy only-if-needed && \
+    python3 -m pip install --no-cache-dir notebook jupyterlab
+
 
 # --------------------------------------------------
-# Hadoop client (YARN)
+# Install Hadoop
 # --------------------------------------------------
-COPY tmp/ /tmp/
-
 RUN tar -xzf /tmp/hadoop-${HADOOP_VERSION}.tar.gz -C /opt && \
     ln -s /opt/hadoop-${HADOOP_VERSION} /opt/hadoop
-
-ENV HADOOP_HOME=/opt/hadoop
-ENV HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop
-ENV YARN_CONF_DIR=/opt/hadoop/etc/hadoop
-ENV PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
-
-# --------------------------------------------------
-# Extra jars directory
-# --------------------------------------------------
-RUN mkdir -p /opt/spark/jars-extra
-
-# --------------------------------------------------
-# Maven dependency cache
-# --------------------------------------------------
-RUN mkdir -p /root/.m2
-
-# --------------------------------------------------
-# Kafka + Delta Lake jars (CACHED BY DOCKER)
-# --------------------------------------------------
-RUN cp /tmp/*.jar /opt/spark/jars/
-
-# -----------------------------
-# Spark config
-# -----------------------------
-COPY spark-defaults.conf /opt/spark/conf/spark-defaults.conf
-COPY spark-env.sh /opt/spark/conf/spark-env.sh
-
-RUN chmod +x /opt/spark/conf/spark-env.sh
-
-# -----------------------------
-# Python (optional but recommended)
-# -----------------------------
-RUN apt-get update && apt-get install -y python3 python3-pip && \
-    ln -s /usr/bin/python3 /usr/bin/python && \
-    pip3 install /tmp/pyspark-3.5.1.tar.gz && \
-    pip3 install /tmp/delta_spark-3.1.0-py3-none-any.whl --upgrade-strategy only-if-needed
-
-# --------------------------------------------------
-# Hadoop config fix: force HDFS (CRITICAL)
-# --------------------------------------------------
 COPY core-site.xml $HADOOP_CONF_DIR/
 COPY hdfs-site.xml $HADOOP_CONF_DIR/
 COPY yarn-site.xml $HADOOP_CONF_DIR/
+
+# --------------------------------------------------
+# Install Spark
+# --------------------------------------------------
+RUN tar -xzf /tmp/spark-${SPARK_VERSION}-bin-hadoop3.tgz -C /opt && \
+    ln -s /opt/spark-${SPARK_VERSION}-bin-hadoop3 /opt/spark
+COPY spark-defaults.conf /opt/spark/conf/spark-defaults.conf
+COPY spark-env.sh /opt/spark/conf/spark-env.sh
+RUN cp /tmp/*.jar /opt/spark/jars/
+RUN chmod +x /opt/spark/conf/spark-env.sh
+
+# (Optional) Spark + Jupyter env
+ENV PYSPARK_PYTHON=python3
+ENV PYSPARK_DRIVER_PYTHON=jupyter
+ENV PYSPARK_DRIVER_PYTHON_OPTS="notebook --ip=0.0.0.0 --port=8888 --allow-root --no-browser"
 
 # --------------------------------------------------
 # Set user and working directory
@@ -85,6 +70,13 @@ COPY yarn-site.xml $HADOOP_CONF_DIR/
 # Allow spark user to own /opt
 # RUN chown -R spark:spark /opt
 RUN rm -rf /tmp/*
+# Create spark user and group
+RUN groupadd -r spark && \
+    useradd -r -g spark -m -d /home/spark spark
+
+RUN mkdir -p /home/spark/.local && \
+    chown -R spark:spark /home/spark
 
 USER spark
+ENV HOME=/home/spark
 WORKDIR /opt/spark

@@ -10,7 +10,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 # --------------------------------------------------
 RUN apt-get update && apt-get install -y \
     openjdk-11-jdk \
-    python3 \
+    openjdk-17-jdk \
+    python3.10 \
+    python3.10-venv \
+    python3.10-distutils \
     python3-pip \
     curl \
     wget \
