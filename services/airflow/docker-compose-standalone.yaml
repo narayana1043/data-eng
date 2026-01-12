@@ -46,6 +46,8 @@ x-airflow-common:
     &airflow-common-depends-on
     postgres:
       condition: service_healthy
+  networks:
+    - data-engine-network
 
 services:
       
@@ -73,6 +75,8 @@ services:
       - "max_replication_slots=10"
       - "-c"
       - "max_wal_senders=10"
+    networks:
+      - data-engine-network
 
   airflow-webserver:
     <<: *airflow-common

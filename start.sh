@@ -52,13 +52,13 @@ start_airflow() {
     if [ -f services/spark/tmp/pyspark-${SPARK_VERSION}.tar.gz ]; then
       cp services/spark/tmp/pyspark-${SPARK_VERSION}.tar.gz services/airflow/tmp/pyspark-${SPARK_VERSION}.tar.gz
     else
-      pip download --no-deps --dest services/airflow/tmp pyspark==${SPARK_VERSION} delta-spark==3.1.0
+      pip download --no-deps --dest services/airflow/tmp pyspark==${SPARK_VERSION} delta-spark==4.0
       mkdir -p services/spark/tmp/
       cp services/airflow/tmp/pyspark-${SPARK_VERSION}.tar.gz services/spark/tmp/pyspark-${SPARK_VERSION}.tar.gz
     fi
   fi
 
-  docker compose -f ${COMPOSE_FILE} up --build -d
+  docker compose -f ${COMPOSE_FILE} up -d
   echo "Airflow services started."
   rm -rf ${PATH_PREFIX}services/airflow/tmp/hadoop-conf/
 
@@ -87,7 +87,7 @@ start_kafka() {
   echo "Starting Kafka services..."
   docker compose -f ${PATH_PREFIX}services/kafka/docker-compose.yaml down
   sleep 3
-  docker compose -f ${PATH_PREFIX}services/kafka/docker-compose.yaml up --build -d
+  docker compose -f ${PATH_PREFIX}services/kafka/docker-compose.yaml up -d
   echo "Kafka services started."
 
   read -r -p "Register Debezium PostgreSQL connector? (y/n): " register_connector

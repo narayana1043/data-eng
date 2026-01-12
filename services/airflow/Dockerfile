@@ -28,5 +28,5 @@ ENV YARN_CONF_DIR=/opt/hadoop/etc/hadoop
 USER airflow
 COPY tmp/ /tmp/
 RUN pip install apache-airflow-providers-apache-kafka
-RUN pip install /tmp/pyspark-3.5.1.tar.gz
+RUN pip install /tmp/pyspark-4.0.1.tar.gz
 RUN pip install apache-airflow-providers-apache-spark==4.1.0
