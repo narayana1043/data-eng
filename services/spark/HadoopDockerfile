@@ -6,7 +6,7 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # --------------------------------------------------
-# Install OS dependencies
+# Install OS & Python 
 # --------------------------------------------------
 RUN apt-get update && apt-get install -y \
     openjdk-11-jdk \
@@ -15,19 +15,25 @@ RUN apt-get update && apt-get install -y \
     python3.10-venv \
     python3.10-distutils \
     python3-pip \
-    curl \
-    wget \
-    net-tools \
-    procps \
-    sudo \
-    vim \
     && rm -rf /var/lib/apt/lists/*
 
 # --------------------------------------------------
-# Hadoop user
+# Create Hadoop-related users
 # --------------------------------------------------
-RUN useradd -ms /bin/bash hadoop && \
-    echo "hadoop ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+RUN groupadd -r airflow && \
+    useradd -m -r -g airflow -s /bin/bash airflow && \
+    groupadd -r hadoop && \
+    useradd -m -r -g hadoop -s /bin/bash hadoop && \
+    groupadd -r spark && \
+    useradd -m -r -g spark -s /bin/bash spark && \
+    echo "hadoop ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    echo "airflow ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    echo "spark ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+RUN mkdir -p /tmp/yarn/local /tmp/yarn/logs && \
+    chown -R root:root /tmp/yarn && \
+    chmod -R 755 /tmp/yarn && \
+    chmod 1777 /tmp
 
 # --------------------------------------------------
 # Hadoop installation
@@ -44,7 +50,7 @@ RUN tar -xzf /tmp/hadoop-${HADOOP_VERSION}.tar.gz -C /opt && \
 # --------------------------------------------------
 # Environment
 # --------------------------------------------------
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
 ENV YARN_CONF_DIR=$HADOOP_CONF_DIR
 ENV PYSPARK_PYTHON=/usr/bin/python3
@@ -61,6 +67,8 @@ RUN mkdir -p /data/hdfs/namenode \
 # --------------------------------------------------
 # Copy Hadoop configs
 # --------------------------------------------------
+RUN rm -f $HADOOP_CONF_DIR/hadoop-env.sh
+COPY hadoop-env.sh $HADOOP_CONF_DIR/hadoop-env.sh
 COPY core-site.xml $HADOOP_CONF_DIR/
 COPY hdfs-site.xml $HADOOP_CONF_DIR/
 COPY yarn-site.xml $HADOOP_CONF_DIR/
@@ -68,6 +76,16 @@ COPY yarn-site.xml $HADOOP_CONF_DIR/
 RUN chown -R hadoop:hadoop $HADOOP_CONF_DIR
 
 RUN rm -rf /tmp/*
+
+# --------------------------------------------------
+# Install Pyspark and Python dependencies
+# --------------------------------------------------
+ENV DELTA_SPARK_VERSION=4.0.0
+ENV SPARK_VERSION=4.0.1
+COPY tmp/delta_spark-${DELTA_SPARK_VERSION}-py3-none-any.whl /tmp/
+COPY tmp/pyspark-${SPARK_VERSION}.tar.gz /tmp/
+RUN python3 -m pip install /tmp/pyspark-${SPARK_VERSION}.tar.gz && \
+    python3 -m pip install /tmp/delta_spark-${DELTA_SPARK_VERSION}-py3-none-any.whl --upgrade-strategy only-if-needed
 
 USER hadoop
 WORKDIR /home/hadoop
@@ -92,9 +110,11 @@ CMD bash -c "\
   yarn --daemon start nodemanager && \
   until yarn node -list >/dev/null 2>&1; do sleep 2; done && \
   \
-  hdfs dfs -mkdir -p /tmp /user/spark /user/delta /spark/spark-logs && \
-  hdfs dfs -chown -R spark:spark /tmp /user/spark /user/delta /spark/ && \
-  hdfs dfs -chmod -R 755 /tmp /user/spark /user/delta /spark/ && \
+  hdfs dfs -mkdir -p /tmp /user/spark /user/airflow /user/hadoop /spark/spark-logs && \
+  hdfs dfs -chown airflow:airflow /user/airflow && \
+  hdfs dfs -chown hadoop:hadoop /user/hadoop && \
+  hdfs dfs -chown spark:spark /user/spark && \
+  hdfs dfs -chmod -R 755 /user/* /tmp /spark/ && \
   \
   hdfs dfs -mkdir -p /tmp/logs && \
   hdfs dfs -chmod -R 1777 /tmp/logs && \
@@ -103,8 +123,6 @@ CMD bash -c "\
   hdfs dfs -chown -R spark:spark /user/hive && \
   \
   hdfs dfs -mkdir -p /user/spark/checkpoints/actors && \
-  hdfs dfs -chown -R spark:spark /user/spark && \
-  hdfs dfs -chmod -R 755 /user/spark && \
   \
   echo 'HDFS + YARN READY' && \
   tail -f /dev/null \

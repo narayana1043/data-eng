@@ -1,4 +1,4 @@
-FROM apache/airflow:3.1.5-python3.12
+FROM apache/airflow:3.1.5-python3.10
 
 # Switch to root to install OS packages
 USER root
@@ -24,7 +24,6 @@ ENV YARN_CONF_DIR=/opt/hadoop/etc/hadoop
 
 
 # Switch back to airflow user
-
 USER airflow
 COPY tmp/ /tmp/
 RUN pip install apache-airflow-providers-apache-kafka

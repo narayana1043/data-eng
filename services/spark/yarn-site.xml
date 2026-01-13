@@ -100,4 +100,14 @@
     <value>/tmp/yarn/logs</value>
   </property>
 
+  <property>
+    <name>yarn.app.mapreduce.am.env</name>
+    <value>JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64</value>
+  </property>
+
+  <property>
+    <name>yarn.app.mapreduce.am.command-opts</name>
+    <value>-Djava.home=/usr/lib/jvm/java-17-openjdk-amd64</value>
+  </property>
+
 </configuration>

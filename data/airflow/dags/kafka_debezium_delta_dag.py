@@ -39,7 +39,7 @@ with DAG(
             "spark.pyspark.python": "/usr/bin/python3",
             "spark.pyspark.driver.python": "/usr/bin/python3",
             "spark.executorEnv.PYSPARK_PYTHON": "/usr/bin/python3",
-            "spark.yarn.appMasterEnv.PYSPARK_PYTHON": "/usr/bin/python3"
+            "spark.yarn.appMasterEnv.PYSPARK_PYTHON": "/usr/bin/python3",
         },
         env_vars={
             "HADOOP_CONF_DIR": "/opt/hadoop/etc/hadoop",
