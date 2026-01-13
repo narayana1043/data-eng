@@ -11,5 +11,5 @@ docker compose -f ${PATH_PREFIX}services/kafka/docker-compose.yaml down
 echo "Kafka services stopped."
 
 echo "Stopping Spark & Delta services..."
-docker compose -f ${PATH_PREFIX}services/spark-delta/docker-compose.yaml down
+docker compose -f ${PATH_PREFIX}services/spark/docker-compose.yaml down
 echo "Spark & Delta services stopped."
