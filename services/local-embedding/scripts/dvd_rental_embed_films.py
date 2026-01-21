@@ -6,10 +6,11 @@ model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
 conn = psycopg2.connect(
     dbname="dvdrental",
-    user="postgres",
-    password="postgres",
-    host="localhost",
-    port=5432
+    user="airflow",
+    password="airflow",
+    host="postgres",
+    port=5432,
+     options="-c search_path=public"
 )
 
 cur = conn.cursor()

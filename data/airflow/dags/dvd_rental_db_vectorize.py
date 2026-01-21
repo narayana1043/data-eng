@@ -26,9 +26,10 @@ with DAG(
         image="local-embedding:latest",
         command="python /scripts/dvd_rental_embed_films.py",
         docker_url="tcp://host.docker.internal:2375",
-        network_mode="bridge",
+        network_mode="data-engine-network",
         auto_remove='success',
-        mounts=[Mount(source="/mnt/c/Users/veera/code/data-eng/services/local-embedding/scripts", target="/scripts", type="bind")],
+        mount_tmp_dir=False,
+        mounts=[Mount(source=r"C:\\Users\\veera\\code\\data-eng\\services\\local-embedding\\scripts", target="/scripts", type="bind", read_only=False)],
     )
 
     index_embedding_column = SQLExecuteQueryOperator(
