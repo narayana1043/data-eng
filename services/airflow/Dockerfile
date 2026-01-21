@@ -29,3 +29,4 @@ COPY tmp/ /tmp/
 RUN pip install apache-airflow-providers-apache-kafka
 RUN pip install /tmp/pyspark-4.0.1.tar.gz
 RUN pip install apache-airflow-providers-apache-spark==4.1.0
+RUN pip install apache-airflow-providers-docker==4.5.2

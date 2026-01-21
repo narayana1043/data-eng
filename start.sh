@@ -71,9 +71,9 @@ start_airflow() {
     sudo chmod -R 775 ./data/airflow/{logs,dags,plugins}
 
     docker compose -f ${PATH_PREFIX}services/airflow/docker-compose.yaml exec airflow-webserver \
-      airflow dags trigger postgres_sample_db_restore
+      airflow dags trigger dvd_rental_db_restore
 
-    echo "Postgres sample DB DAG triggered."
+    echo "Postgres dvd_rental_db_restore DAG triggered."
   fi
 
   docker ps -aq -f status=exited -f label=com.docker.compose.project=airflow | xargs -r docker rm

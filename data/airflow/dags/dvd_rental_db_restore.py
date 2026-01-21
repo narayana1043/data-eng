@@ -1,13 +1,14 @@
-from airflow.sdk import dag, task
-from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 import requests
 from datetime import datetime
+from airflow.sdk import dag, task
 from airflow.providers.standard.operators.bash import BashOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
+from dvd_rental_db_datasets import dvdrental_db_ready_ds
 
 default_args = {'owner': 'airflow'}
 
 @dag(
-    dag_id='postgres_sample_db_restore',
+    dag_id='dvd_rental_db_restore',
     default_args=default_args,
     start_date=datetime(2023, 1, 1),
     catchup=False,
@@ -52,6 +53,11 @@ def postgres_sample_db_load():
         ),
     )
 
-    download >> extract >> prepare_restore_scripts >> restore_dvdrental_db
+    dvdrental_db_ready = EmptyOperator(
+        task_id='dvdrental_db_ready',
+        outlets=[dvdrental_db_ready_ds]
+    )
+
+    download >> extract >> prepare_restore_scripts >> restore_dvdrental_db >> dvdrental_db_ready
 
 dag = postgres_sample_db_load()
