@@ -28,7 +28,7 @@ with DAG(
         docker_url="tcp://host.docker.internal:2375",
         network_mode="bridge",
         auto_remove='success',
-        mounts=[Mount(source="/home/veera/code/data-eng/services/local-embedding/scripts", target="/scripts", type="bind")],
+        mounts=[Mount(source="/mnt/c/Users/veera/code/data-eng/services/local-embedding/scripts", target="/scripts", type="bind")],
     )
 
     index_embedding_column = SQLExecuteQueryOperator(
