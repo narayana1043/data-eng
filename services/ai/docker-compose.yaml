@@ -1,0 +1,55 @@
+networks:
+  data-engine-network:
+    external: true
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama:/root/.ollama
+      - ./start-ollama.sh:/start-ollama.sh:ro
+    networks:
+      - data-engine-network
+    environment:
+      OLLAMA_HOST: "0.0.0.0:11434"
+      OLLAMA_MODEL: "qwen2.5:3b"
+    entrypoint: ["/bin/sh", "/start-ollama.sh"]
+
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: local-embedding:latest
+    container_name: local-embedding
+    # restart: unless-stopped
+    environment:
+      PORT: 8000
+      LOG_LEVEL: DEBUG
+    ports:
+      - "${PORT:-8000}:${PORT:-8000}"
+    volumes:
+      - ./app:/app
+      - ./venv:/venv
+      - ./pipcache:/root/.cache/pip
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${PORT:-8000}/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: 
+      - /bin/sh
+      - -c
+      - |
+        sleep inf
+    networks:
+      - data-engine-network
+
+volumes:
+  ollama-data:
+  app:
+  pipcache:
+  venv:

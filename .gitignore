@@ -12,3 +12,5 @@ data/iceberg/
 data/airflow/logs/
 .venv/
 *tmp/
+*venv/
+services/ai/ollama/*

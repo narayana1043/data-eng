@@ -55,6 +55,7 @@ services:
       
   postgres:
     image: pgvector/pgvector:pg16
+    container_name: postgres
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
